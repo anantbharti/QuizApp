@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".TeacherDashboard">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Your Tests"
+        android:textColor="#000000"
+        android:textStyle="bold"
+        android:textSize="22sp"
+        android:textAlignment="center"
+        android:layout_margin="20dp"
+        android:id="@+id/your_tests_heading"
+        android:layout_alignParentTop="true"
+        android:gravity="center_horizontal" />
+
+    <ScrollView
+        android:layout_below="@+id/your_tests_heading"
+        android:layout_width="match_parent"
+        android:id="@+id/scroll_view_your_tests"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/add_test">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorAccent"
+            android:layout_margin="15dp"
+            android:text="Test1"
+            android:padding="10dp"
+            android:onClick="startAddingQuestion"
+            android:textSize="16sp"
+            android:id="@+id/edit_test_one"
+            android:textColor="@color/colorPrimaryDark"/>
+    </ScrollView>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add test"
+            android:id="@+id/add_test"
+            android:layout_marginHorizontal="50dp"
+            android:layout_marginVertical="20dp"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:textColor="@color/colorPrimaryDark" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="20dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginHorizontal="50dp"
+            android:text="Log out"
+            android:textColor="@color/colorPrimaryDark"
+            android:onClick="teacherLogOut"/>
+
+</RelativeLayout>
