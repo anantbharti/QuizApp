@@ -184,18 +184,20 @@
                 android:layout_weight="1"
                 android:layout_marginHorizontal="30dp"/>
         </LinearLayout>
-        
-        <Button
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="100dp"
-            android:text="Save"
-            android:textColor="@color/colorPrimaryDark"
-            android:id="@+id/save_ques"/>
+            android:layout_marginTop="30dp"
+            android:textAlignment="center"
+            android:text="Don't forget to save after reaching last question!"
+            android:gravity="center_horizontal" />
+
         <Button
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="100dp"
+            android:layout_marginTop="30dp"
             android:text="Go to Dashboard"
             android:textColor="@color/colorPrimaryDark"
             android:onClick="goToDashboard"/>

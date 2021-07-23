@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.example.bookworm.model.User;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     FirebaseUser firebaseUser;
     FirebaseDatabase database;
     DatabaseReference myRef;
+    Button getStarted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +40,10 @@ public class MainActivity extends AppCompatActivity {
         database=FirebaseDatabase.getInstance();
         user= new User();
         firebaseUser=mAuth.getCurrentUser();
+        getStarted=findViewById(R.id.get_started);
 
         if(firebaseUser!=null){
+            getStarted.setVisibility(View.GONE);
             myRef=database.getReference(mAuth.getUid());
             myRef.addValueEventListener(new ValueEventListener() {
                 @Override

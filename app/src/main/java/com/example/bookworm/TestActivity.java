@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RadioButton;
@@ -14,7 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.bookworm.model.Question;
-import com.example.bookworm.model.Test;
+import com.example.bookworm.model.Result;
 import com.example.bookworm.model.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -25,52 +26,44 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.util.EventListener;
-import java.util.HashMap;
-import java.util.Vector;
-
 public class TestActivity extends AppCompatActivity {
 
     private TextView testStudentName,testSubject,testRoll,testTime,testQuestion,testOptA,testOptB,testOptC,testOptD,userAnswer;
     private RadioGroup optionsRadioGroup;
     private RadioButton radOptionA,radOptionB,radOptionC,radOptionD,radSelectedBtn;
     private Button saveAndPrev, saveAndNext,endTest;
-    private ProgressDialog testProgressDialog;
-    static int[] score = new int[10];
-    static String[] userAns = new String[10];
+//    private ProgressDialog testProgressDialog;
+    static int[] score = new int[100];
+    static String[] userAns = new String[100];
     FirebaseAuth mAuth;
-    static int cqn=1,testCode,mo=0;
-    static String ans;
+    static int cqn=1,mo=0;
+    static String ans,testName;
+    static int totalQues,testCode;
     FirebaseDatabase database;
     DatabaseReference qRef,myRef;
     User user;
-    Test test;
+    Result result;
     Question question;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_test);
         setUpTestViews();
-        testProgressDialog=new ProgressDialog(this);
-        testProgressDialog.setMessage("Loading question...");
+        testCode=getIntent().getExtras().getInt("TestCode");
+        testName=getIntent().getExtras().getString("TestName");
+        totalQues=getIntent().getExtras().getInt("TotalQues");
+        testSubject.setText(testName);
+
         mAuth=FirebaseAuth.getInstance();
         database=FirebaseDatabase.getInstance();
         user= new User();
-        test = new Test();
-        question=new Question();
-
-        qRef=database.getReference("Questions").child("Q"+cqn);
-        qRef.addValueEventListener(new ValueEventListener() {
+        myRef=database.getReference(mAuth.getUid());
+        myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                question=snapshot.getValue(Question.class);
-                testQuestion.setText("Q"+cqn+". "+question.getQue());
-                testOptA.setText("(a) "+question.getA());
-                testOptB.setText("(b) "+question.getB());
-                testOptC.setText("(c) "+question.getC());
-                testOptD.setText("(d) "+question.getD());
-                ans=question.getAns();
-                userAnswer.setText("Your answer: "+ userAns[cqn-1]);
+                user=snapshot.getValue(User.class);
+                testStudentName.setText(user.getName().toString().trim());
+                testRoll.setText(user.getEmail().toString().trim());
             }
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
@@ -78,10 +71,29 @@ public class TestActivity extends AppCompatActivity {
             }
         });
 
+        question=new Question();
+        result=new Result();
+        for(int i=0;i<100;i++)
+            score[i]=0;
+        setQuestion();
+
+//        int TIME=2*2*60;
+        new CountDownTimer(totalQues*2*60*1000, 1000) {
+            public void onTick(long millisUntilFinished) {
+                testTime.setText((millisUntilFinished / 1000)/60+"m "+(millisUntilFinished/1000)%60+"s");
+            }
+            public void onFinish() {
+                for(int i=1;i<=100;i++){
+                    mo=mo+score[i-1];
+                }
+                Toast.makeText(TestActivity.this, "Test finished! Your Score : "+mo, Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }.start();
+
         saveAndNext.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                testProgressDialog.show();
                 if(radOptionA.isChecked()||radOptionB.isChecked()||radOptionC.isChecked()||radOptionD.isChecked()){
                     int selectedRadId= optionsRadioGroup.getCheckedRadioButtonId();
                     radSelectedBtn=findViewById(selectedRadId);
@@ -95,15 +107,19 @@ public class TestActivity extends AppCompatActivity {
                     }
                     optionsRadioGroup.clearCheck();
                 }
-                setNextQuestion();
-                testProgressDialog.dismiss();
+                if(cqn==totalQues){
+                    Toast.makeText(TestActivity.this, "No more questions!", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    cqn++;
+                    setQuestion();
+                }
             }
         });
 
         saveAndPrev.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                testProgressDialog.show();
                 if(radOptionA.isChecked()||radOptionB.isChecked()||radOptionC.isChecked()||radOptionD.isChecked()){
                     int selectedRadId= optionsRadioGroup.getCheckedRadioButtonId();
                     radSelectedBtn=findViewById(selectedRadId);
@@ -117,51 +133,61 @@ public class TestActivity extends AppCompatActivity {
                     }
                     optionsRadioGroup.clearCheck();
                 }
-                    setPreviousQuestion();
-                    testProgressDialog.dismiss();
+
+                if(cqn==1){
+                    Toast.makeText(TestActivity.this, "Already first question!", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    cqn--;
+                    setQuestion();
+                }
             }
         });
 
         endTest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                testProgressDialog.show();
-                HashMap<String, Integer> us=new HashMap<String, Integer>();
-                HashMap<String,String> ua=new HashMap<String, String>();
                 for(int i=1;i<=10;i++){
-                    us.put("Q"+i,score[i-1]);
-                    ua.put("Q"+i,userAns[i-1]);
                     mo=mo+score[i-1];
                 }
-                test.setFullMarks(10);
-                test.setMarksObtained(mo);
-                test.setTestCode(1);
-                test.setUserAnswer(ua);
-                test.setUserScore(us);
-                myRef=database.getReference(mAuth.getUid()).child("T1");
-                myRef.setValue(test).addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if(task.isSuccessful())
-                            Toast.makeText(TestActivity.this,"Your score:"+mo,Toast.LENGTH_SHORT).show();
-                        else
-                            Toast.makeText(TestActivity.this,"Error in uploading answers!",Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                });
+                Toast.makeText(TestActivity.this, "Test finished! Your Score : "+mo, Toast.LENGTH_SHORT).show();
+                finish();
+                startActivity(new Intent(TestActivity.this,StudentDashboard.class));
+//                result.setFullMarks(test.getFullMarks());
+//                result.setMarksObtained(mo);
+//                result.setTestName(test.getTestName());
+//                int min = 100;
+//                int max = 900;
+//                int random_int = (int)Math.floor(Math.random()*(max-min+1)+min);
+//
+//                myRef=database.getReference(mAuth.getUid()).child("Results").child(test.getTestName()+random_int);
+//                myRef.setValue(result).addOnCompleteListener(new OnCompleteListener<Void>() {
+//                    @Override
+//                    public void onComplete(@NonNull Task<Void> task) {
+//                        if(task.isSuccessful())
+//                            Toast.makeText(TestActivity.this,"Your score:"+mo,Toast.LENGTH_SHORT).show();
+//                        else
+//                            Toast.makeText(TestActivity.this,"Error in uploading answers!",Toast.LENGTH_SHORT).show();
+//                        finish();
+//                        startActivity(new Intent(TestActivity.this,StudentDashboard.class));
+//                    }
+//                });
             }
         });
-
     }
 
-    private void setNextQuestion(){
-        if(cqn<10){
-            cqn++;
-            qRef=database.getReference("Questions").child("Q"+cqn);
-            qRef.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    question=snapshot.getValue(Question.class);
+    private void setQuestion(){
+        qRef=database.getReference("AllTests").child(testName+testCode).child("Questions").child("Q"+cqn);
+        qRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                question=snapshot.getValue(Question.class);
+                if(question==null){
+                    Toast.makeText(TestActivity.this, "Test not complete!", Toast.LENGTH_SHORT).show();
+                    finish();
+                    startActivity(new Intent(TestActivity.this,StudentDashboard.class));
+                }
+                else{
                     testQuestion.setText("Q"+cqn+". "+question.getQue());
                     testOptA.setText("(a) "+question.getA());
                     testOptB.setText("(b) "+question.getB());
@@ -170,42 +196,12 @@ public class TestActivity extends AppCompatActivity {
                     ans=question.getAns();
                     userAnswer.setText("Your answer: "+userAns[cqn-1]);
                 }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    Toast.makeText(TestActivity.this,"Error"+error.getCode(),Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-        else {
-            Toast.makeText(TestActivity.this, "No more questions!", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void setPreviousQuestion(){
-        if(cqn>1){
-            cqn--;
-            qRef=database.getReference("Questions").child("Q"+cqn);
-            qRef.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    question=snapshot.getValue(Question.class);
-                    testQuestion.setText("Q"+cqn+". "+question.getQue());
-                    testOptA.setText("(a) "+question.getA());
-                    testOptB.setText("(b) "+question.getB());
-                    testOptC.setText("(c) "+question.getC());
-                    testOptD.setText("(d) "+question.getD());
-                    ans=question.getAns();
-                    userAnswer.setText("Your answer: "+userAns[cqn-1]);
-                }
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    Toast.makeText(TestActivity.this,"Error"+error.getCode(),Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-        else {
-            Toast.makeText(TestActivity.this, "Already at first question!", Toast.LENGTH_SHORT).show();
-        }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(TestActivity.this,"Error"+error.getCode(),Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setUpTestViews(){

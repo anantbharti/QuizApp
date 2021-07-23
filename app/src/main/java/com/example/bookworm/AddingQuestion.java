@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.Editable;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -15,8 +14,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.bookworm.model.Question;
-import com.example.bookworm.model.User;
-import com.google.android.gms.common.util.Clock;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -36,13 +33,16 @@ public class AddingQuestion extends AppCompatActivity {
     private RadioGroup addOptRadGrp;
     private TextView addQuestionNo;
     private RadioButton addRadA,addRadB,addRadC,addRadD,addAnsRadBtn;
-    private Button saveQues,nextQues,prevQues;
+    private Button nextQues,prevQues;
     FirebaseAuth mAuth;
     FirebaseDatabase database;
-    static int quesNo=1;
-    DatabaseReference myRef,qRef;
-    User user;
-    HashMap<String,Question> oldQuestions=new HashMap<String, Question>();
+    private static int quesNo=1;
+    static DatabaseReference myRef,qRef;
+    private static String testName;
+    private static int totalQues,testCode;
+
+    static HashMap<String,Question> oldQuestions=new HashMap<String, Question>();
+    Question question;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,54 +50,12 @@ public class AddingQuestion extends AppCompatActivity {
         setContentView(R.layout.activity_adding_question);
         setUpAddViews();
         mAuth=FirebaseAuth.getInstance();
+        question=new Question();
         database=FirebaseDatabase.getInstance();
-//        question=new Question();
-//        myRef=database.getReference(mAuth.getUid());
-//        myRef.addValueEventListener(new ValueEventListener() {
-//            @Override
-//            public void onDataChange(@NonNull DataSnapshot snapshot) {
-//                user=snapshot.getValue(User.class);
-//                addQNo=user.getCqn();
-//                addQNo++;
-//                addQuestionNo.setText("Q"+addQNo+":");
-//            }
-//            @Override
-//            public void onCancelled(@NonNull DatabaseError error) {
-//                Toast.makeText(AddingQuestion.this,"Error"+error.getCode(),Toast.LENGTH_SHORT).show();
-//            }
-//        });
-
-        saveQues.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                HashMap<String,Question> newQuestions=new HashMap<String, Question>();
-                int qn=1;
-                Iterator it = oldQuestions.entrySet().iterator();
-                while (it.hasNext())
-                {
-                    Map.Entry mapElement = (Map.Entry)it.next();
-                    Question ques=(Question) mapElement.getValue();
-                    ques.setQueNo(qn);
-                    qn++;
-                    newQuestions.put(""+qn,ques);
-                }
-                qRef=database.getReference("Tests").child("Questions");
-                qRef.setValue(newQuestions).addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if(task.isSuccessful()){
-                            Toast.makeText(AddingQuestion.this,"Question uploaded successfully",Toast.LENGTH_SHORT).show();
-                            finish();
-                            startActivity(new Intent(AddingQuestion.this,TeacherDashboard.class));
-                        }
-                        else {
-                            Toast.makeText(AddingQuestion.this,"Error in uploading question!",Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-
-            }
-        });
+        testCode=getIntent().getExtras().getInt("TestCode");
+        testName=getIntent().getExtras().getString("TestName");
+        totalQues=getIntent().getExtras().getInt("TotalQues");
+        setQues();
 
         nextQues.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -124,51 +82,119 @@ public class AddingQuestion extends AppCompatActivity {
                     question.setC(addC);
                     question.setD(addD);
                     question.setAns(addAns);
-//                    question.setQueNo(addQNo);
+                    question.setQueNo(quesNo);
+                    oldQuestions.put("Q"+quesNo,question);
 
-                    oldQuestions.put(""+quesNo,question);
-                    quesNo++;
-                    int qno=quesNo;
-                    while (qno<101&&oldQuestions.containsKey(""+qno)==false){
-                        qno++;
-                    }
-                    if(oldQuestions.containsKey(qno))
-                    {
-                        quesNo=qno;
-                        Question nQ=oldQuestions.get(""+quesNo);
-                        addQueStatement.setText(nQ.getQue());
-                        addOptA.setText(nQ.getA());
-                        addOptB.setText(nQ.getB());
-                        addOptC.setText(nQ.getC());
-                        addOptD.setText(nQ.getD());
-                        addOptRadGrp.clearCheck();
-                        String ro=nQ.getAns();
-                        if(ro.equals("a"))
-                            addRadA.setChecked(true);
-                        else if(ro.equals("b"))
-                            addRadB.setChecked(true);
-                        else if(ro.equals("c"))
-                            addRadC.setChecked(true);
-                        else
-                            addRadD.setChecked(true);
-                    }
-                    else if(oldQuestions.size()==50)
-                    {
-                        Toast.makeText(AddingQuestion.this,"Only 50 questions allowed!",Toast.LENGTH_SHORT).show();
-                    }
-                    else
-                    {
-                        addQueStatement.getText().clear();
-                        addOptA.getText().clear();
-                        addOptB.getText().clear();
-                        addOptC.getText().clear();
-                        addOptD.getText().clear();
-                        addOptRadGrp.clearCheck();
+                    if(quesNo==totalQues){
+                        quesNo=1;
+                        upload();
+                    }else{
+                        quesNo++;
+                        setQues();
                     }
                 }
             }
         });
-//        prevQues.setOnClickListener(new O);
+
+        prevQues.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String addQue=addQueStatement.getText().toString().trim();
+                String addA=addOptA.getText().toString().trim();
+                String addB=addOptB.getText().toString().trim();
+                String addC=addOptC.getText().toString().trim();
+                String addD=addOptD.getText().toString().trim();
+                if(addA.isEmpty()||addB.isEmpty()||addC.isEmpty()||addD.isEmpty()||addQue.isEmpty()){
+                    Toast.makeText(AddingQuestion.this,"Empty field!",Toast.LENGTH_SHORT).show();
+                }
+                else if(!addRadA.isChecked()&& !addRadB.isChecked()&& !addRadC.isChecked()&& !addRadD.isChecked()){
+                    Toast.makeText(AddingQuestion.this,"Select a correct option!",Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    int addAnsRadId=addOptRadGrp.getCheckedRadioButtonId();
+                    addAnsRadBtn=findViewById(addAnsRadId);
+                    String addAns= addAnsRadBtn.getText().toString().trim();
+                    Question question = new Question();
+                    question.setQue(addQue);
+                    question.setA(addA);
+                    question.setB(addB);
+                    question.setC(addC);
+                    question.setD(addD);
+                    question.setAns(addAns);
+                    question.setQueNo(quesNo);
+                    oldQuestions.put("Q"+quesNo,question);
+
+                    if(quesNo==1){
+                        Toast.makeText(AddingQuestion.this,"Already first question!",Toast.LENGTH_SHORT).show();
+                    }else{
+                        quesNo--;
+                        setQues();
+                    }
+                }
+            }
+        });
+    }
+
+    private void upload() {
+        qRef=database.getReference("AllTests").child(testName+testCode).child("Questions");
+        qRef.setValue(oldQuestions).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if(task.isSuccessful()){
+                    Toast.makeText(AddingQuestion.this,"Questions saved",Toast.LENGTH_SHORT).show();
+                    finish();
+                    startActivity(new Intent(AddingQuestion.this,TeacherDashboard.class));
+                }
+                else {
+                    Toast.makeText(AddingQuestion.this,"Error in uploading question!",Toast.LENGTH_SHORT).show();
+                }
+                finish();
+            }
+        });
+    }
+
+    private void setQues() {
+        if(quesNo==totalQues){
+            nextQues.setText("Save");
+        }
+        myRef=database.getReference("AllTests").child(testName+testCode).child("Questions").child("Q"+quesNo);
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                question=snapshot.getValue(Question.class);
+                if(question!=null){
+                    addQueStatement.setText(question.getQue());
+                    addQuestionNo.setText("Q"+quesNo);
+                    addOptA.setText(question.getA());
+                    addOptB.setText(question.getB());
+                    addOptC.setText(question.getC());
+                    addOptD.setText(question.getD());
+                    addOptRadGrp.clearCheck();
+                    String ro=question.getAns();
+                    if(ro.equals("a"))
+                        addRadA.setChecked(true);
+                    else if(ro.equals("b"))
+                        addRadB.setChecked(true);
+                    else if(ro.equals("c"))
+                        addRadC.setChecked(true);
+                    else
+                        addRadD.setChecked(true);
+                }
+                else {
+                    addQueStatement.setText("");
+                    addQuestionNo.setText("Q"+quesNo);
+                    addOptA.setText("");
+                    addOptB.setText("");
+                    addOptC.setText("");
+                    addOptD.setText("");
+                    addOptRadGrp.clearCheck();
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(AddingQuestion.this,"Error"+error.getCode(),Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setUpAddViews(){
@@ -178,7 +204,6 @@ public class AddingQuestion extends AppCompatActivity {
         addOptC=findViewById(R.id.add_option_c);
         addOptD=findViewById(R.id.add_option_d);
         addOptRadGrp=findViewById(R.id.add_opt_rad_grp);
-        saveQues=findViewById(R.id.save_ques);
         addRadA=findViewById(R.id.add_rad_optA);
         addRadB=findViewById(R.id.add_rad_optB);
         addRadC=findViewById(R.id.add_rad_optC);

@@ -62,14 +62,14 @@ public class LoginActivity extends AppCompatActivity {
                                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                                         user=snapshot.getValue(User.class);
                                         loginDesignation= user.getDesignation();
+                                        Toast.makeText(LoginActivity.this, "Logged in successfully.", Toast.LENGTH_SHORT).show();
+                                        finish();
                                         if(loginDesignation.equals("Student")) {
                                             startActivity(new Intent(LoginActivity.this, StudentDashboard.class));
                                         }
                                         else {
                                             startActivity(new Intent(LoginActivity.this, TeacherDashboard.class));
                                         }
-                                        Toast.makeText(LoginActivity.this, "Logged in successfully.", Toast.LENGTH_SHORT).show();
-                                        finish();
                                     }
                                     @Override
                                     public void onCancelled(@NonNull DatabaseError error) {
