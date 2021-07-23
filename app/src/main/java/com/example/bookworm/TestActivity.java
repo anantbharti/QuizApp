@@ -33,12 +33,12 @@ public class TestActivity extends AppCompatActivity {
     private RadioButton radOptionA,radOptionB,radOptionC,radOptionD,radSelectedBtn;
     private Button saveAndPrev, saveAndNext,endTest;
 //    private ProgressDialog testProgressDialog;
-    static int[] score = new int[100];
-    static String[] userAns = new String[100];
+    int[] score = new int[100];
+    String[] userAns = new String[100];
     FirebaseAuth mAuth;
-    static int cqn=1,mo=0;
-    static String ans,testName;
-    static int totalQues,testCode;
+    int cqn=1,mo=0;
+    String ans,testName;
+    int totalQues,testCode;
     FirebaseDatabase database;
     DatabaseReference qRef,myRef;
     User user;

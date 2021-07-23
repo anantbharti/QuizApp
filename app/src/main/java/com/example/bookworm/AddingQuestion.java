@@ -36,10 +36,10 @@ public class AddingQuestion extends AppCompatActivity {
     private Button nextQues,prevQues;
     FirebaseAuth mAuth;
     FirebaseDatabase database;
-    private static int quesNo=1;
-    static DatabaseReference myRef,qRef;
-    private static String testName;
-    private static int totalQues,testCode;
+    private int quesNo=1;
+    DatabaseReference myRef,qRef;
+    private String testName;
+    private int totalQues,testCode;
 
     static HashMap<String,Question> oldQuestions=new HashMap<String, Question>();
     Question question;
